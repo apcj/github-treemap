@@ -32,10 +32,11 @@ form {
 <script src="http://d3js.org/d3.v3.min.js"></script>
 <script>
 
-var margin = {top: 30, right: 10, bottom: 10, left: 10},
+var margin = {top: 40, right: 10, bottom: 10, left: 10},
     width = 960 - margin.left - margin.right,
-    height = 500 - margin.top - margin.bottom,
-    color = d3.scale.category20c();
+    height = 500 - margin.top - margin.bottom;
+
+var color = d3.scale.category20c();
 
 var treemap = d3.layout.treemap()
     .size([width, height])
@@ -46,8 +47,8 @@ var div = d3.select("body").append("div")
     .style("position", "relative")
     .style("width", (width + margin.left + margin.right) + "px")
     .style("height", (height + margin.top + margin.bottom) + "px")
-    .style("margin-left", margin.left + "px")
-    .style("margin-top", margin.top + "px");
+    .style("left", margin.left + "px")
+    .style("top", margin.top + "px");
 
 d3.json("flare.json", function(error, root) {
   var node = div.datum(root).selectAll(".node")
