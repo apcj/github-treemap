@@ -64,6 +64,6 @@ d3.json("flare.json", function(error, root) {
       .text(function(d) { return d.name; });
 });
 
-d3.select(self.frameElement).style("height", diameter + "px");
+d3.select(self.frameElement).style("height", diameter - 150 + "px");
 
 </script>
