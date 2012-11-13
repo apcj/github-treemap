@@ -11,18 +11,18 @@ text {
 <script src="http://d3js.org/d3.v3.min.js"></script>
 <script>
 
-var radius = 960,
+var diameter = 960,
     format = d3.format(",d"),
     color = d3.scale.category20c();
 
 var bubble = d3.layout.pack()
     .sort(null)
-    .size([radius, radius])
+    .size([diameter, diameter])
     .padding(1.5);
 
 var svg = d3.select("body").append("svg")
-    .attr("width", radius)
-    .attr("height", radius)
+    .attr("width", diameter)
+    .attr("height", diameter)
     .attr("class", "bubble");
 
 d3.json("flare.json", function(error, root) {
@@ -58,5 +58,7 @@ function classes(root) {
   recurse(null, root);
   return {children: classes};
 }
+
+d3.select(self.frameElement).style("height", diameter + "px");
 
 </script>
