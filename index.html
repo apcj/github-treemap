@@ -25,10 +25,8 @@ form {
 }
 
 </style>
-<form>
-  <label><input type="radio" name="mode" value="size" checked> Size</label>
-  <label><input type="radio" name="mode" value="count"> Count</label>
-</form>
+<body>
+</body>
 <script src="http://d3js.org/d3.v3.min.js"></script>
 <script>
 
@@ -36,12 +34,14 @@ var margin = {top: 40, right: 10, bottom: 10, left: 10},
     width = 960 - margin.left - margin.right,
     height = 500 - margin.top - margin.bottom;
 
-var color = d3.scale.category20c();
+var color = function(node) {
+  return node.changes > 0 ? "red" : "green";
+}
 
 var treemap = d3.layout.treemap()
     .size([width, height])
     .sticky(true)
-    .value(function(d) { return d.size; });
+    .value(function(d) { return d.files; });
 
 var div = d3.select("body").append("div")
     .style("position", "relative")
@@ -50,26 +50,34 @@ var div = d3.select("body").append("div")
     .style("left", margin.left + "px")
     .style("top", margin.top + "px");
 
-d3.json("flare.json", function(error, root) {
+d3.tsv("data.tsv", function(error, rows) {
+  
+  var root = { children: [] };
+  
+  for (var i = 0; i < rows.length; i++) {
+    var segments = rows[i].path.split("/");
+    console.log(segments);
+    var node = root;
+    for (var d = 0; d < segments.length; d++) {
+      var segment = segments[d];
+      var child = node.children.filter(function (child) { return child.name === segment; })[0];
+      if (!child) {
+        node.children.push(child = { name: segment, files: rows[i].files, changes: rows[i].changes, children: [] } );
+      }
+      node = child;
+    }
+  }
+  
+  console.log(root);
+  
   var node = div.datum(root).selectAll(".node")
       .data(treemap.nodes)
     .enter().append("div")
       .attr("class", "node")
       .call(position)
-      .style("background", function(d) { return d.children ? color(d.name) : null; })
+      .style("background", function(d) { return d.children ? color(d) : null; })
       .text(function(d) { return d.children ? null : d.name; });
 
-  d3.selectAll("input").on("change", function change() {
-    var value = this.value === "count"
-        ? function() { return 1; }
-        : function(d) { return d.size; };
-
-    node
-        .data(treemap.value(value).nodes)
-      .transition()
-        .duration(1500)
-        .call(position);
-  });
 });
 
 function position() {
