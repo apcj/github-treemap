@@ -5,8 +5,6 @@
 body {
   font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
   margin: auto;
-  position: relative;
-  width: 960px;
 }
 
 form {
@@ -30,12 +28,18 @@ form {
 <script src="http://d3js.org/d3.v3.min.js"></script>
 <script>
 
-var margin = {top: 40, right: 10, bottom: 10, left: 10},
-    width = 960 - margin.left - margin.right,
-    height = 500 - margin.top - margin.bottom;
+var margin = {top: 10, right: 10, bottom: 10, left: 10},
+    width = window.innerWidth - margin.left - margin.right,
+    height = window.innerHeight - margin.top - margin.bottom;
+
+var greenToRed = d3.scale.linear().domain([0, 1]).range([120, 0]);
+var saturation = d3.scale.linear().domain([0, 1]).range([.5, 1]);
+var brightness = d3.scale.linear().domain([0, 1]).range([.8, .5]);
 
 var color = function(node) {
-  return node.changes > 0 ? "red" : "green";
+  var ratio = parseInt(node.changes) / parseInt(node.files);
+  if (ratio > 1) console.log(ratio, node);
+  return d3.hsl(greenToRed(ratio), saturation(ratio), brightness(ratio)).toString();
 }
 
 var treemap = d3.layout.treemap()
@@ -52,17 +56,19 @@ var div = d3.select("body").append("div")
 
 d3.tsv("data.tsv", function(error, rows) {
   
-  var root = { children: [] };
+  var root = {};
   
   for (var i = 0; i < rows.length; i++) {
     var segments = rows[i].path.split("/");
-    console.log(segments);
     var node = root;
     for (var d = 0; d < segments.length; d++) {
       var segment = segments[d];
+      if (!node.children) {
+        node.children = [];
+      }
       var child = node.children.filter(function (child) { return child.name === segment; })[0];
       if (!child) {
-        node.children.push(child = { name: segment, files: rows[i].files, changes: rows[i].changes, children: [] } );
+        node.children.push(child = { name: segment, files: rows[i].files, changes: rows[i].changes } );
       }
       node = child;
     }
