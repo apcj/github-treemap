@@ -24,6 +24,7 @@ form {
 
 </style>
 <body>
+  <p id="filename"></p>
 </body>
 <script src="http://d3js.org/d3.v3.min.js"></script>
 <script>
@@ -36,16 +37,18 @@ var greenToRed = d3.scale.linear().domain([0, 1]).range([120, 0]);
 var saturation = d3.scale.linear().domain([0, 1]).range([.5, 1]);
 var brightness = d3.scale.linear().domain([0, 1]).range([.8, .5]);
 
-var color = function(node) {
-  var ratio = parseInt(node.changes) / parseInt(node.files);
-  if (ratio > 1) console.log(ratio, node);
+var color = function(file) {
+  var ratio = (file.changes || 0) / file.size;
+  if (ratio > 1) console.log(ratio, file);
+  ratio = Math.min(1, ratio);
   return d3.hsl(greenToRed(ratio), saturation(ratio), brightness(ratio)).toString();
 }
 
 var treemap = d3.layout.treemap()
     .size([width, height])
     .sticky(true)
-    .value(function(d) { return d.files; });
+    // .padding(5)
+    .value(function(d) { return d.size; });
 
 var div = d3.select("body").append("div")
     .style("position", "relative")
@@ -54,12 +57,17 @@ var div = d3.select("body").append("div")
     .style("left", margin.left + "px")
     .style("top", margin.top + "px");
 
-d3.tsv("data.tsv", function(error, rows) {
-  
-  var root = {};
-  
-  for (var i = 0; i < rows.length; i++) {
-    var segments = rows[i].path.split("/");
+function updateTree(root, files, key) {
+  for (var i = 0; i < files.length; i++) {
+    var file = files[i];    
+    var extension = (/\.([^\.]+)$/.exec(file.filename) || [])[1];
+    
+    var excluded = ["js", "css", "graffle", "in", "txt", "less", "svg"];
+    
+    if (excluded.indexOf(extension) !== -1) {
+      continue;
+    }
+    var segments = file.filename.split("/");
     var node = root;
     for (var d = 0; d < segments.length; d++) {
       var segment = segments[d];
@@ -68,22 +76,35 @@ d3.tsv("data.tsv", function(error, rows) {
       }
       var child = node.children.filter(function (child) { return child.name === segment; })[0];
       if (!child) {
-        node.children.push(child = { name: segment, files: rows[i].files, changes: rows[i].changes } );
+        node.children.push(child = { name: segment } );
       }
       node = child;
     }
+    node[key] = file.changes;
+    node.file = file;
   }
-  
-  console.log(root);
-  
-  var node = div.datum(root).selectAll(".node")
-      .data(treemap.nodes)
-    .enter().append("div")
-      .attr("class", "node")
-      .call(position)
-      .style("background", function(d) { return d.children ? color(d) : null; })
-      .text(function(d) { return d.children ? null : d.name; });
+}
 
+d3.json("https://api.github.com/repos/neo4j/neo4j/compare/9c4f3c010b03070098c2102d46d347bac809f4e5...HEAD", function(error, data1) {
+  var root = {};
+
+  updateTree(root, data1.files, "size");
+
+  d3.json("https://api.github.com/repos/neo4j/neo4j/compare/2.0.0-RC1...2.0.0", function(error, data2) {
+  
+    updateTree(root, data2.files, "changes");
+
+    console.log(root);
+  
+    var node = div.datum(root).selectAll(".node")
+        .data(treemap.nodes)
+      .enter().append("div")
+        .attr("class", "node")
+        .call(position)
+        .style("background", function(d) { return color(d); })
+        .text(function(d) { return d.children ? null : d.name; })
+        .on("mouseover", function(d) { d3.select("#filename").text(d.file.filename); });
+  });
 });
 
 function position() {
