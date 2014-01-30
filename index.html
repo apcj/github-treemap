@@ -86,7 +86,7 @@ function updateTree(root, files, key) {
 }
 
 var hashParams = function() {
-  var list = window.location.hash.split("&");
+  var list = window.location.hash.substr(1).split("&");
   var map = {};
   for (var i = 0; i < list.length; i++) {
     var tokens = list[i].split("=");
@@ -102,14 +102,27 @@ var endCommit = hashParams["end"];
 
 // 9c4f3c010b03070098c2102d46d347bac809f4e5
 
-d3.json("https://api.github.com/repos/neo4j/neo4j/compare/" + initialCommit + "..." + endCommit, function(error, data1) {
+function getCachedJson(uri, callback) {
+  var cached = window.localStorage.getItem(uri);
+  console.log(uri)
+  if (cached) {
+    callback(null, JSON.parse(cached));
+  } else {
+    d3.json(uri, function(error, data) {
+      var simplified = data.files.map(function(file) { return { filename: file.filename, changes: file.changes }; });
+      window.localStorage.setItem(uri, JSON.stringify(simplified));
+      callback(error, simplified);
+    });
+  }
+}
+getCachedJson("https://api.github.com/repos/neo4j/neo4j/compare/" + initialCommit + "..." + endCommit, function(error, files) {
   var root = {};
 
-  updateTree(root, data1.files, "size");
+  updateTree(root, files, "size");
 
-  d3.json("https://api.github.com/repos/neo4j/neo4j/compare/" + startCommit + "..." + endCommit, function(error, data2) {
+  getCachedJson("https://api.github.com/repos/neo4j/neo4j/compare/" + startCommit + "..." + endCommit, function(error, files) {
   
-    updateTree(root, data2.files, "changes");
+    updateTree(root, files, "changes");
 
     console.log(root);
   
