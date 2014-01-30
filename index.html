@@ -2,33 +2,31 @@
 <meta charset="utf-8">
 <style>
 
-body {
+body, p {
   font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
-  margin: auto;
-}
-
-form {
-  position: absolute;
-  right: 10px;
-  top: 10px;
+  margin: 0;
 }
 
 .node {
-  font: 10px sans-serif;
-  line-height: 12px;
+  font-size: 10px;
   overflow: hidden;
   position: absolute;
   text-indent: 2px;
 }
 
+#canvas {
+  position: absolute;
+}
+
 </style>
 <body>
   <p id="filename"></p>
+  <div id="canvas"></div>
 </body>
 <script src="http://d3js.org/d3.v3.min.js"></script>
 <script>
 
-var margin = {top: 20, right: 10, bottom: 10, left: 10},
+var margin = {top: 20, right: 0, bottom: 0, left: 0},
     width = window.innerWidth - margin.left - margin.right,
     height = window.innerHeight - margin.top - margin.bottom;
 
@@ -37,7 +35,7 @@ var blueToRed = d3.scale.linear().domain([0, 1]).range([240, 360]);
 var saturation = d3.scale.linear().domain([0, 1]).range([.5, 1]);
 var brightness = d3.scale.linear().domain([0, 1]).range([.9, .5]);
 
-var color = function(file) {
+function color(file) {
   var ratio = (file.changes || 0) / file.size;
   if (ratio > 1) console.log(ratio, file);
   ratio = Math.min(1, ratio);
@@ -51,12 +49,11 @@ var treemap = d3.layout.treemap()
     .padding(1)
     .value(function(d) { return d.size; });
 
-var div = d3.select("body").append("div")
-    .style("position", "relative")
-    .style("width", (width + margin.left + margin.right) + "px")
-    .style("height", (height + margin.top + margin.bottom) + "px")
+var div = d3.select("#canvas")
     .style("left", margin.left + "px")
-    .style("top", margin.top + "px");
+    .style("top", margin.top + "px")
+    .style("right", margin.right + "px")
+    .style("bottom", margin.bottom + "px");
 
 function updateTree(root, files, key) {
   for (var i = 0; i < files.length; i++) {
@@ -106,7 +103,7 @@ var compareUri = "https://api.github.com/repos/" + repo + "/compare/";
 
 function getCachedJson(uri, callback) {
   var cached = window.localStorage.getItem(uri);
-  console.log(uri)
+  console.log(uri);
   if (cached) {
     callback(null, JSON.parse(cached));
   } else {
