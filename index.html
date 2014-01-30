@@ -85,12 +85,29 @@ function updateTree(root, files, key) {
   }
 }
 
-d3.json("https://api.github.com/repos/neo4j/neo4j/compare/9c4f3c010b03070098c2102d46d347bac809f4e5...HEAD", function(error, data1) {
+var hashParams = function() {
+  var list = window.location.hash.split("&");
+  var map = {};
+  for (var i = 0; i < list.length; i++) {
+    var tokens = list[i].split("=");
+    map[tokens[0]] = tokens[1];
+  }
+  return map;
+}();
+
+var initialCommit = hashParams["initial"];
+var startCommit = hashParams["start"];
+var endCommit = hashParams["end"];
+
+
+// 9c4f3c010b03070098c2102d46d347bac809f4e5
+
+d3.json("https://api.github.com/repos/neo4j/neo4j/compare/" + initialCommit + "..." + endCommit, function(error, data1) {
   var root = {};
 
   updateTree(root, data1.files, "size");
 
-  d3.json("https://api.github.com/repos/neo4j/neo4j/compare/2.0.0-RC1...2.0.0", function(error, data2) {
+  d3.json("https://api.github.com/repos/neo4j/neo4j/compare/" + startCommit + "..." + endCommit, function(error, data2) {
   
     updateTree(root, data2.files, "changes");
 
