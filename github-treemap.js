@@ -56,16 +56,16 @@ function resize() {
 measure();
 window.onresize = resize;
 
+function interesting(file) {
+    var extension = (/\.([^\.]+)$/.exec(file.filename) || [])[1];
+    var excluded = ["js", "css", "graffle", "in", "txt", "less", "svg"];
+    return excluded.indexOf(extension) == -1
+}
+
 function updateTree(root, files, key) {
+    var totalChanges = 0;
     for (var i = 0; i < files.length; i++) {
         var file = files[i];
-        var extension = (/\.([^\.]+)$/.exec(file.filename) || [])[1];
-
-        var excluded = ["js", "css", "graffle", "in", "txt", "less", "svg"];
-
-        if (excluded.indexOf(extension) !== -1) {
-            continue;
-        }
         var segments = file.filename.split("/");
         var node = root;
         for (var d = 0; d < segments.length; d++) {
@@ -79,9 +79,11 @@ function updateTree(root, files, key) {
             }
             node = child;
         }
+        totalChanges += file.changes;
         node[key] = file.changes;
         node.file = file;
     }
+    return totalChanges;
 }
 
 var hashParams = function() {
@@ -116,15 +118,22 @@ function getCachedJson(uri, callback) {
     }
 }
 getCachedJson(compareUri + initialCommit + "..." + endCommit, function(error, files) {
-    var root = {};
+    files = files.filter(interesting);
 
-    updateTree(root, files, "size");
+    var root = {};
+    var totalFiles = files.length;
+    var totalLines = updateTree(root, files, "size");
 
     getCachedJson(compareUri + startCommit + "..." + endCommit, function(error, files) {
+        files = files.filter(interesting);
 
-        updateTree(root, files, "changes");
+        var changedFiles = files.length;
+        var changedLines = updateTree(root, files, "changes");
 
-        console.log(root);
+        d3.select( ".count.total.files" ).text( totalFiles );
+        d3.select( ".count.total.lines" ).text( totalLines );
+        d3.select( ".count.changed.files" ).text( changedFiles );
+        d3.select( ".count.changed.lines" ).text( changedLines );
 
         var node = div.datum(root).selectAll(".node")
             .data(treemap.nodes);
