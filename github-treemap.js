@@ -1,4 +1,4 @@
-var margin = {top: 20, right: 0, bottom: 0, left: 0};
+var margin = {top: 36, right: 0, bottom: 28, left: 0};
 
 var greenToRed = d3.scale.linear().domain([0, 1]).range([120, 0]);
 var blueToRed = d3.scale.linear().domain([0, 1]).range([240, 360]);
@@ -138,7 +138,10 @@ getCachedJson(compareUri + initialCommit + "..." + endCommit, function(error, fi
             .style("background", function(d) { return d.children ? null : color(d); })
             .style("border", function(d) { return d.children ? null : "1px solid gray"; })
             .text(function(d) { return d.children ? null : d.name; })
-            .on("mouseover", function(d) { d3.select("#filename").text((d.file || {}).filename); });
+            .on("mouseover", function(d) {
+                var text = d.file ? d.file.filename.replace(/\//g, " / ") : null;
+                d3.select("#filename").text( text);
+            });
     });
 });
 

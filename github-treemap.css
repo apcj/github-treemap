@@ -1,6 +1,53 @@
-body, p {
-    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+body {
+    font-family: Helvetica, arial, freesans, clean, sans-serif;
     margin: 0;
+}
+
+p {
+    color: #777;
+    font-size: 14px;
+    margin: 0;
+    padding: 0 10px;
+    line-height: 28px;
+}
+
+span.owner, span.repo {
+    color: #555;
+    font-weight: bold;
+}
+
+span.space {
+    padding: 0 10px;
+}
+
+.range-editor .range {
+    color: #777;
+    padding: 7px 10px;
+    background-color: #fafafa;
+    border: 1px solid #eee;
+    border-radius: 0 3px 3px 0;
+    position: relative;
+    font-size: 14px;
+}
+
+.range-editor .range .dots {
+    margin: 0 4px;
+    font-size: 16px;
+    color: #999
+}
+
+.branch-name {
+    display: inline-block;
+    padding: 2px 6px;
+    color: rgba(0, 0, 0, 0.5);
+    font-family: Monaco, "Liberation Mono", Courier, monospace;
+    font-size: 12px;
+    background-color: rgba(209, 227, 237, 0.5);
+    border-radius: 3px
+}
+
+a.branch-name {
+    color: #4183c4
 }
 
 .node {
@@ -12,4 +59,9 @@ body, p {
 
 #canvas {
     position: absolute;
+}
+
+#filename {
+    position: absolute;
+    bottom: 0;
 }
