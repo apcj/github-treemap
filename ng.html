@@ -1,0 +1,30 @@
+<!doctype html>
+<html ng-app>
+<head>
+  <script src="http://code.angularjs.org/1.2.11/angular.min.js"></script>
+  <script>
+    function LocationController($scope, $location) {
+      $scope.$watch('repo', function(path) {
+        $location.search('repo', path);
+        console.log($location.search());
+//        console.log($location.search().repo);
+      });
+      $scope.$watch(function() {
+        console.log("checking");
+        return $location.search().repo;
+      }, function(path) {
+        console.log($location.search().repo);
+        $scope.repo = $location.search().repo;
+//        console.log($location.search());
+////        console.log($location.search('repo'));
+////        $scope.locationPath = $location.search('repo');
+      });
+    }
+  </script>
+</head>
+<body>
+<div ng-controller="LocationController">
+  <input type="text" ng-model="repo" />
+</div>
+</body>
+</html>
