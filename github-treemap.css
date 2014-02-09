@@ -36,7 +36,7 @@ span.space {
     color: #999
 }
 
-.branch-name {
+.commit {
     display: inline-block;
     padding: 2px 6px;
     color: rgba(0, 0, 0, 0.5);
@@ -46,7 +46,7 @@ span.space {
     border-radius: 3px
 }
 
-a.branch-name {
+a.commit {
     color: #4183c4
 }
 

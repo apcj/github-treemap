@@ -92,20 +92,18 @@ function updateTree(root, files, key) {
     return totalSize;
 }
 
-var hashParams = function() {
-    var list = window.location.hash.substr(1).split("&");
-    var map = {};
-    for (var i = 0; i < list.length; i++) {
-        var tokens = list[i].split("=");
-        map[tokens[0]] = tokens[1];
-    }
-    return map;
-}();
+var hashParams = /#\/repos\/([^/]+)\/([^/]+)\/compare\/([^/]+)\.\.\.([^/]+)/.exec(window.location.hash);
+var owner = hashParams[1];
+var repo = hashParams[2];
+var startCommit = hashParams[3];
+var endCommit = hashParams[4];
 
-var startCommit = hashParams["start"];
-var endCommit = hashParams["end"];
-var repo = "apcj/neo4j";
-var repoUri = "https://api.github.com/repos/" + repo;
+d3.select('.owner').text(owner);
+d3.select('.repo').text(repo);
+d3.select('.start.commit').text(startCommit);
+d3.select('.end.commit').text(endCommit);
+
+var repoUri = "https://api.github.com/repos/" + owner + "/" + repo;
 
 function getCachedJson(uri, transform, callback) {
     var cached = window.localStorage.getItem(uri);
