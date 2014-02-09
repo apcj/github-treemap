@@ -1,7 +1,6 @@
 var margin = {top: 36, right: 0, bottom: 28, left: 0};
 
 var greenToRed = d3.scale.linear().domain([0, 1]).range([120, 0]);
-var blueToRed = d3.scale.linear().domain([0, 1]).range([240, 360]);
 var saturation = d3.scale.linear().domain([0, 1]).range([.5, 1]);
 var brightness = d3.scale.linear().domain([0, 1]).range([.9, .5]);
 
@@ -19,8 +18,12 @@ function fillColor( file, maxChangeRatio ) {
         return null;
     }
     ratio = Math.min(1, ratio);
+    return d3.hsl(greenToRed(ratio), saturation(ratio), brightness(ratio)).toString();
+}
+
+function borderColor( file ) {
     var test = file.file.filename.indexOf("test") !== -1;
-    return d3.hsl(test ? blueToRed(ratio) : greenToRed(ratio), saturation(ratio), brightness(ratio)).toString();
+    return test ? "#77A" : "#AAA"
 }
 
 var treemap = d3.layout.treemap()
@@ -163,7 +166,7 @@ getCachedJson(repoUri + "/commits/" + startCommit, function(data) { return data;
 
             node.call(position)
                 .style("background", function(d) { return d.children ? null : fillColor(d, maxChangeRatio); })
-                .style("border", function(d) { return d.children ? null : "1px solid gray"; })
+                .style("border", function(d) { return d.children ? null : "1px solid " + borderColor(d); })
                 .text(function(d) { return d.children ? null : d.name; })
                 .on("mouseover", function(d) {
                     var text = d.file ? d.file.filename.replace(/\//g, " / ") : null;
