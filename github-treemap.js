@@ -7,7 +7,6 @@ var brightness = d3.scale.linear().domain([0, 1]).range([.9, .5]);
 
 function color(file) {
     var ratio = (file.changes || 0) / file.size;
-    if (ratio > 1) console.log(ratio, file);
     ratio = Math.min(1, ratio);
     var test = file.file.filename.indexOf("test") !== -1;
     return d3.hsl(test ? blueToRed(ratio) : greenToRed(ratio), saturation(ratio), brightness(ratio)).toString();
@@ -34,8 +33,6 @@ function position() {
 var width, height;
 
 function measure() {
-    console.log("Resize");
-
     width = window.innerWidth - margin.left - margin.right;
     height = window.innerHeight - margin.top - margin.bottom;
 
@@ -49,8 +46,6 @@ function resize() {
     var node = div.selectAll(".node")
         .data(treemap.nodes)
         .call(position);
-
-    console.log(node);
 }
 
 measure();
@@ -106,7 +101,6 @@ var compareUri = "https://api.github.com/repos/" + repo + "/compare/";
 
 function getCachedJson(uri, transform, callback) {
     var cached = window.localStorage.getItem(uri);
-    console.log(uri);
     if (cached) {
         callback(null, JSON.parse(cached));
     } else {
