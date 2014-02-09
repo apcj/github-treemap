@@ -1,3 +1,15 @@
+var hashParams = /#\/repos\/([^/]+)\/([^/]+)\/compare\/([^?]+)\.\.\.([^?]+)(\?filter=(.+))?/.exec(window.location.hash);
+var owner = hashParams[1];
+var repo = hashParams[2];
+var startCommit = hashParams[3];
+var endCommit = hashParams[4];
+var filters = hashParams[6];
+
+d3.select('.owner').text(owner);
+d3.select('.repo').text(repo);
+d3.select('.start.commit').text(startCommit);
+d3.select('.end.commit').text(endCommit);
+
 var margin = {top: 36, right: 0, bottom: 28, left: 0};
 
 var greenToRed = d3.scale.linear().domain([0, 1]).range([120, 0]);
@@ -66,9 +78,13 @@ measure();
 window.onresize = resize;
 
 function interesting(file) {
-    var extension = (/\.([^\.]+)$/.exec(file.filename) || [])[1];
-    var included = ["java", "scala"];
-    return included.indexOf(extension) !== -1
+    if (filters) {
+        var extension = (/\.([^\.]+)$/.exec(file.filename) || [])[1];
+        var included = filters.split(",");
+        return included.indexOf(extension) !== -1
+    } else {
+        return true;
+    }
 }
 
 function updateTree(root, files, key) {
@@ -94,17 +110,6 @@ function updateTree(root, files, key) {
     }
     return totalSize;
 }
-
-var hashParams = /#\/repos\/([^/]+)\/([^/]+)\/compare\/([^/]+)\.\.\.([^/]+)/.exec(window.location.hash);
-var owner = hashParams[1];
-var repo = hashParams[2];
-var startCommit = hashParams[3];
-var endCommit = hashParams[4];
-
-d3.select('.owner').text(owner);
-d3.select('.repo').text(repo);
-d3.select('.start.commit').text(startCommit);
-d3.select('.end.commit').text(endCommit);
 
 var repoUri = "https://api.github.com/repos/" + owner + "/" + repo;
 
