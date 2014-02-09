@@ -104,27 +104,32 @@ var compareUri = "https://api.github.com/repos/" + repo + "/compare/";
 
 // 9c4f3c010b03070098c2102d46d347bac809f4e5
 
-function getCachedJson(uri, callback) {
+function getCachedJson(uri, transform, callback) {
     var cached = window.localStorage.getItem(uri);
     console.log(uri);
     if (cached) {
         callback(null, JSON.parse(cached));
     } else {
         d3.json(uri, function(error, data) {
-            var simplified = data.files.map(function(file) { return { filename: file.filename, changes: file.changes }; });
+            var simplified = transform(data);
             window.localStorage.setItem(uri, JSON.stringify(simplified));
             callback(error, simplified);
         });
     }
 }
-getCachedJson(compareUri + initialCommit + "..." + endCommit, function(error, files) {
+
+function extractFileList(diffData) {
+    return diffData.files.map(function(file) { return { filename: file.filename, changes: file.changes }; });
+}
+
+getCachedJson(compareUri + initialCommit + "..." + endCommit, extractFileList, function(error, files) {
     files = files.filter(interesting);
 
     var root = {};
     var totalFiles = files.length;
     var totalLines = updateTree(root, files, "size");
 
-    getCachedJson(compareUri + startCommit + "..." + endCommit, function(error, files) {
+    getCachedJson(compareUri + startCommit + "..." + endCommit, extractFileList, function(error, files) {
         files = files.filter(interesting);
 
         var changedFiles = files.length;
