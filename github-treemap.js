@@ -5,8 +5,19 @@ var blueToRed = d3.scale.linear().domain([0, 1]).range([240, 360]);
 var saturation = d3.scale.linear().domain([0, 1]).range([.5, 1]);
 var brightness = d3.scale.linear().domain([0, 1]).range([.9, .5]);
 
-function color(file) {
-    var ratio = (file.changes || 0) / file.size;
+function changeRatio( file )
+{
+    var number = file.size > 0 && file.changes > 0 ? file.changes / file.size : 0;
+    if (isNaN(number)) console.log(file);
+    return number;
+}
+
+function fillColor( file, maxChangeRatio ) {
+    var ratio = changeRatio(file) / maxChangeRatio;
+    if ( ratio == 0 )
+    {
+        return null;
+    }
     ratio = Math.min(1, ratio);
     var test = file.file.filename.indexOf("test") !== -1;
     return d3.hsl(test ? blueToRed(ratio) : greenToRed(ratio), saturation(ratio), brightness(ratio)).toString();
@@ -53,12 +64,12 @@ window.onresize = resize;
 
 function interesting(file) {
     var extension = (/\.([^\.]+)$/.exec(file.filename) || [])[1];
-    var excluded = ["js", "css", "graffle", "in", "txt", "less", "svg"];
-    return excluded.indexOf(extension) == -1
+    var included = ["java", "scala"];
+    return included.indexOf(extension) !== -1
 }
 
 function updateTree(root, files, key) {
-    var totalChanges = 0;
+    var totalSize = 0;
     for (var i = 0; i < files.length; i++) {
         var file = files[i];
         var segments = file.filename.split("/");
@@ -74,11 +85,11 @@ function updateTree(root, files, key) {
             }
             node = child;
         }
-        totalChanges += file.changes;
-        node[key] = file.changes;
+        totalSize += file.size;
+        node[key] = file.size;
         node.file = file;
     }
-    return totalChanges;
+    return totalSize;
 }
 
 var hashParams = function() {
@@ -91,13 +102,10 @@ var hashParams = function() {
     return map;
 }();
 
-var initialCommit = hashParams["initial"];
 var startCommit = hashParams["start"];
 var endCommit = hashParams["end"];
 var repo = "apcj/neo4j";
-var compareUri = "https://api.github.com/repos/" + repo + "/compare/";
-
-// 9c4f3c010b03070098c2102d46d347bac809f4e5
+var repoUri = "https://api.github.com/repos/" + repo;
 
 function getCachedJson(uri, transform, callback) {
     var cached = window.localStorage.getItem(uri);
@@ -112,44 +120,58 @@ function getCachedJson(uri, transform, callback) {
     }
 }
 
-function extractFileList(diffData) {
-    return diffData.files.map(function(file) { return { filename: file.filename, changes: file.changes }; });
+function extractFileListFromTree(treeData) {
+    return treeData.tree.map(function(file) { return { filename: file.path, size: file.size }; });
 }
 
-getCachedJson(compareUri + initialCommit + "..." + endCommit, extractFileList, function(error, files) {
-    files = files.filter(interesting);
+function extractFileListFromDiff(diffData) {
+    return diffData.files.map(function(file) { return { filename: file.filename, size: file.changes }; });
+}
 
-    var root = {};
-    var totalFiles = files.length;
-    var totalLines = updateTree(root, files, "size");
-
-    getCachedJson(compareUri + startCommit + "..." + endCommit, extractFileList, function(error, files) {
+getCachedJson(repoUri + "/commits/" + startCommit, function(data) { return data; }, function(error, data) {
+    var startTree = data.commit.tree.sha;
+    getCachedJson(repoUri + "/git/trees/" + startTree + "?recursive=1", extractFileListFromTree, function(error, files) {
         files = files.filter(interesting);
 
-        var changedFiles = files.length;
-        var changedLines = updateTree(root, files, "changes");
+        var root = {};
+        var totalFiles = files.length;
+        var totalSize = updateTree(root, files, "size");
 
-        d3.select( ".count.total.files" ).text( totalFiles );
-        d3.select( ".count.total.lines" ).text( totalLines );
-        d3.select( ".count.changed.files" ).text( changedFiles );
-        d3.select( ".count.changed.lines" ).text( changedLines );
+        getCachedJson(repoUri + "/compare/" + startCommit + "..." + endCommit, extractFileListFromDiff, function(error, files) {
+            files = files.filter(interesting);
 
-        var node = div.datum(root).selectAll(".node")
-            .data(treemap.nodes);
+            var changedFiles = files.length;
+            var changedSize = updateTree(root, files, "changes");
 
-        resize();
+            function filesInTree(node) {
+                if ( node.children ) {
+                    return node.children.reduce(function(a, b) { return a.concat(filesInTree(b));}, []);
+                }
+                return node;
+            }
+            var maxChangeRatio = filesInTree(root).map( changeRatio ).reduce( function(a, b) { return Math.max(a, b); }, 0 );
 
-        node.enter().append("div")
-            .attr("class", "node");
+            d3.select( ".count.total.files" ).text( totalFiles );
+            d3.select( ".count.total.size" ).text( totalSize );
+            d3.select( ".count.changed.files" ).text( changedFiles );
+            d3.select( ".count.changed.size" ).text( changedSize );
 
-        node.call(position)
-            .style("background", function(d) { return d.children ? null : color(d); })
-            .style("border", function(d) { return d.children ? null : "1px solid gray"; })
-            .text(function(d) { return d.children ? null : d.name; })
-            .on("mouseover", function(d) {
-                var text = d.file ? d.file.filename.replace(/\//g, " / ") : null;
-                d3.select("#filename").text( text);
-            });
+            var node = div.datum(root).selectAll(".node")
+                .data(treemap.nodes);
+
+            resize();
+
+            node.enter().append("div")
+                .attr("class", "node");
+
+            node.call(position)
+                .style("background", function(d) { return d.children ? null : fillColor(d, maxChangeRatio); })
+                .style("border", function(d) { return d.children ? null : "1px solid gray"; })
+                .text(function(d) { return d.children ? null : d.name; })
+                .on("mouseover", function(d) {
+                    var text = d.file ? d.file.filename.replace(/\//g, " / ") : null;
+                    d3.select("#filename").text( text);
+                });
+        });
     });
 });
-
