@@ -135,13 +135,13 @@ getCachedJson(repoUri + "/commits/" + startCommit, function(data) { return data;
 
         var root = {};
         var totalFiles = files.length;
-        var totalSize = updateTree(root, files, "size");
+        updateTree(root, files, "size");
 
         getCachedJson(repoUri + "/compare/" + startCommit + "..." + endCommit, extractFileListFromDiff, function(error, files) {
             files = files.filter(interesting);
 
             var changedFiles = files.length;
-            var changedSize = updateTree(root, files, "changes");
+            updateTree(root, files, "changes");
 
             function filesInTree(node) {
                 if ( node.children ) {
@@ -152,9 +152,7 @@ getCachedJson(repoUri + "/commits/" + startCommit, function(data) { return data;
             var maxChangeRatio = filesInTree(root).map( changeRatio ).reduce( function(a, b) { return Math.max(a, b); }, 0 );
 
             d3.select( ".count.total.files" ).text( totalFiles );
-            d3.select( ".count.total.size" ).text( totalSize );
             d3.select( ".count.changed.files" ).text( changedFiles );
-            d3.select( ".count.changed.size" ).text( changedSize );
 
             var node = div.datum(root).selectAll(".node")
                 .data(treemap.nodes);
