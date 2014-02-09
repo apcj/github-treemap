@@ -153,6 +153,7 @@ getCachedJson(repoUri + "/commits/" + startCommit, function(data) { return data;
 
             d3.select( ".count.total.files" ).text( totalFiles );
             d3.select( ".count.changed.files" ).text( changedFiles );
+            d3.select( ".percentage.changed.files" ).text(((changedFiles / totalFiles) * 100).toFixed());
 
             var node = div.datum(root).selectAll(".node")
                 .data(treemap.nodes);
