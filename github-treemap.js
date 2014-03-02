@@ -138,30 +138,31 @@ function renderPage() {
 
     getCachedJson(repoUri + "/commits/" + startCommit, function(data) { return data; }, function(error, data) {
         var startTree = data.commit.tree.sha;
-        getCachedJson(repoUri + "/git/trees/" + startTree + "?recursive=1", extractFileListFromTree, function(error, files) {
-            files = files.filter(interesting);
+        getCachedJson(repoUri + "/git/trees/" + startTree + "?recursive=1", extractFileListFromTree, function(error, originalFiles) {
+            originalFiles = originalFiles.filter(interesting);
 
             var root = {};
-            var totalFiles = files.length;
-            updateTree(root, files, "size");
+            updateTree(root, originalFiles, "size");
 
-            getCachedJson(repoUri + "/compare/" + startCommit + "..." + endCommit, extractFileListFromDiff, function(error, files) {
-                files = files.filter(interesting);
+            getCachedJson(repoUri + "/compare/" + startCommit + "..." + endCommit, extractFileListFromDiff, function(error, changedFiles) {
+                changedFiles = changedFiles.filter(interesting);
 
-                var changedFiles = files.length;
-                updateTree(root, files, "changes");
+                var changedFileCount = changedFiles.length;
+                updateTree(root, changedFiles, "changes");
 
                 function filesInTree(node) {
                     if ( node.children ) {
                         return node.children.reduce(function(a, b) { return a.concat(filesInTree(b));}, []);
                     }
-                    return node;
+                    return [node];
                 }
-                var maxChangeRatio = filesInTree(root).map( changeRatio ).reduce( function(a, b) { return Math.max(a, b); }, 0 );
 
-                d3.select( ".count.total.files" ).text( totalFiles );
-                d3.select( ".count.changed.files" ).text( changedFiles );
-                d3.select( ".percentage.changed.files" ).text(((changedFiles / totalFiles) * 100).toFixed());
+                var allFiles = filesInTree( root );
+                var maxChangeRatio = allFiles.map( changeRatio ).reduce( function(a, b) { return Math.max(a, b); }, 0 );
+
+                d3.select( ".count.total.files" ).text( allFiles.length );
+                d3.select( ".count.changed.files" ).text( changedFileCount );
+                d3.select( ".percentage.changed.files" ).text(((changedFileCount / allFiles.length) * 100).toFixed());
 
                 var node = div.datum(root).selectAll(".node")
                     .data(treemap.nodes);
