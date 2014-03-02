@@ -10,6 +10,7 @@ function renderPage() {
     d3.select('.repo').text(repo);
     d3.select('.start.commit').text(startCommit);
     d3.select('.end.commit').text(endCommit);
+    d3.select('.filters').text(filters ? "(only files with extensions " + filters + ")" : "(all files)");
 
     var margin = {top: 36, right: 0, bottom: 28, left: 0};
 
