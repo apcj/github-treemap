@@ -171,6 +171,8 @@ function renderPage() {
                 node.enter().append("div")
                     .attr("class", "node");
 
+                node.exit().remove();
+
                 node.call(position)
                     .style("background", function(d) { return d.children ? null : fillColor(d, maxChangeRatio); })
                     .style("border", function(d) { return d.children ? null : "1px solid " + borderColor(d); })
