@@ -113,14 +113,52 @@ function renderPage() {
 
     var repoUri = "https://api.github.com/repos/" + owner + "/" + repo;
 
-    function getCachedJson(uri, transform, callback) {
-        var cached = window.localStorage.getItem(uri);
-        if (cached) {
-            callback(null, JSON.parse(cached));
+    function gitData(uri, transform, callback) {
+        var cacheIndex = {};
+        var cacheIndexKey = "github-treemap.cache-index";
+        var cacheIndexString = window.localStorage.getItem(cacheIndexKey);
+        if (cacheIndexString !== null) {
+            cacheIndex = JSON.parse(cacheIndexString);
+        }
+        function storeIndex() {
+            window.localStorage.setItem(cacheIndexKey, JSON.stringify(cacheIndex));
+        }
+        var cachedResult = window.localStorage.getItem(uri);
+        if (cachedResult) {
+            cacheIndex[uri].lastUsed = new Date().getTime();
+            storeIndex();
+            callback(null, JSON.parse(cachedResult));
         } else {
             d3.json(uri, function(error, data) {
                 var simplified = transform(data);
-                window.localStorage.setItem(uri, JSON.stringify(simplified));
+                function storeInCache() {
+                    window.localStorage.setItem(uri, JSON.stringify(simplified));
+                    cacheIndex[uri] = { uri: uri, lastUsed: new Date().getTime() };
+                    storeIndex();
+                }
+                function handleQuotaExceeded(e) {
+                    if (e.name === "QuotaExceededError") {
+                        if(d3.keys(cacheIndex).length > 0) {
+                            var evictable = d3.values(cacheIndex).sort(function(a, b) { return a.lastUsed - b.lastUsed; })[0];
+                            console.log("evicting", evictable);
+                            delete cacheIndex[evictable.uri];
+                            window.localStorage.removeItem(evictable.uri);
+                            storeIndex();
+                            try {
+                                storeInCache();
+                            } catch (e) {
+                                handleQuotaExceeded(e);
+                            }
+                        }
+                    } else {
+                        throw e;
+                    }
+                }
+                try {
+                    storeInCache();
+                } catch (e) {
+                    handleQuotaExceeded(e);
+                }
                 callback(error, simplified);
             });
         }
@@ -134,22 +172,22 @@ function renderPage() {
         return diffData.files.map(function(file) { return { filename: file.filename, size: file.changes }; });
     }
 
-    getCachedJson(repoUri + "/commits/" + startCommit, function(data) { return data; }, function(error, data) {
+    gitData(repoUri + "/commits/" + startCommit, function(data) { return data; }, function(error, data) {
         var startTree = data.commit.tree.sha;
-        getCachedJson(repoUri + "/git/trees/" + startTree + "?recursive=1", extractFileListFromTree, function(error, originalFiles) {
+        gitData(repoUri + "/git/trees/" + startTree + "?recursive=1", extractFileListFromTree, function(error, originalFiles) {
             originalFiles = originalFiles.filter(interesting);
 
             var root = {};
             updateTree(root, originalFiles, "startSize");
 
-            getCachedJson(repoUri + "/commits/" + endCommit, function(data) { return data; }, function(error, data) {
+            gitData(repoUri + "/commits/" + endCommit, function(data) { return data; }, function(error, data) {
                 var endTree = data.commit.tree.sha;
-                getCachedJson(repoUri + "/git/trees/" + endTree + "?recursive=1", extractFileListFromTree, function(error, endFiles) {
+                gitData(repoUri + "/git/trees/" + endTree + "?recursive=1", extractFileListFromTree, function(error, endFiles) {
                     endFiles = endFiles.filter(interesting);
 
                     updateTree(root, endFiles, "endSize");
 
-                    getCachedJson(repoUri + "/compare/" + startCommit + "..." + endCommit, extractFileListFromDiff, function(error, changedFiles) {
+                    gitData(repoUri + "/compare/" + startCommit + "..." + endCommit, extractFileListFromDiff, function(error, changedFiles) {
                         changedFiles = changedFiles.filter(interesting);
 
                         var changedFileCount = changedFiles.length;
