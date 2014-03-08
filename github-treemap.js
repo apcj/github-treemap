@@ -26,13 +26,13 @@ function renderPage() {
         return number;
     }
 
-    function fillColor( file, maxChangeRatio ) {
-        var ratio = changeRatio(file) / maxChangeRatio;
-        if ( ratio == 0 )
+    function fillColor( file, changeRatios ) {
+        var changes = changeRatio( file );
+        if ( changes === 0 )
         {
             return null;
         }
-        ratio = Math.min(1, ratio);
+        var ratio = changeRatios.indexOf(changes) / (changeRatios.length - 1);
         return d3.hsl(greenToRed(ratio), saturation(ratio), brightness(ratio)).toString();
     }
 
@@ -100,7 +100,7 @@ function renderPage() {
                 if (!node.children) {
                     node.children = [];
                 }
-                var child = node.children.filter(function(segment) { return function (child) { return child.name === segment; }})(segment)[0];
+                var child = node.children.filter(function(segment) { return function (child) { return child.name === segment; }}(segment))[0];
                 if (!child) {
                     node.children.push(child = { name: segment } );
                 }
@@ -163,7 +163,7 @@ function renderPage() {
                         }
 
                         var allFiles = filesInTree( root );
-                        var maxChangeRatio = allFiles.map( changeRatio ).reduce( function(a, b) { return Math.max(a, b); }, 0 );
+                        var changeRatios = allFiles.map( changeRatio ).filter(function(d) { return d > 0; }).sort();
 
                         d3.select( ".count.total.files" ).text( allFiles.length );
                         d3.select( ".count.changed.files" ).text( changedFileCount );
@@ -180,7 +180,7 @@ function renderPage() {
                         node.exit().remove();
 
                         node.call(position)
-                            .style("background", function(d) { return d.children ? null : fillColor(d, maxChangeRatio); })
+                            .style("background", function(d) { return d.children ? null : fillColor(d, changeRatios); })
                             .style("border", function(d) { return d.children ? null : "1px solid " + borderColor(d); })
                             .text(function(d) { return d.children ? null : d.name; })
                             .on("mouseover", function(d) {
