@@ -100,7 +100,7 @@ function renderPage() {
                 if (!node.children) {
                     node.children = [];
                 }
-                var child = node.children.filter(function (child) { return child.name === segment; })[0];
+                var child = node.children.filter(function(segment) { return function (child) { return child.name === segment; }})(segment)[0];
                 if (!child) {
                     node.children.push(child = { name: segment } );
                 }
