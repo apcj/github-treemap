@@ -20,7 +20,8 @@ function renderPage() {
 
     function changeRatio( file )
     {
-        var number = file.size > 0 && file.changes > 0 ? file.changes / file.size : 0;
+        var size = Math.max(file.startSize, file.endSize);
+        var number = size > 0 && file.changes > 0 ? file.changes / size : 0;
         if (isNaN(number)) console.log(file);
         return number;
     }
@@ -43,7 +44,7 @@ function renderPage() {
     var treemap = d3.layout.treemap()
         .sticky(true)
         .padding(1)
-        .value(function(d) { return d.size; });
+        .value(function(file) { return Math.max(file.startSize, file.endSize); });
 
     var div = d3.select("#canvas")
         .style("left", margin.left + "px")
@@ -90,7 +91,6 @@ function renderPage() {
     }
 
     function updateTree(root, files, key) {
-        var totalSize = 0;
         for (var i = 0; i < files.length; i++) {
             var file = files[i];
             var segments = file.filename.split("/");
@@ -106,11 +106,9 @@ function renderPage() {
                 }
                 node = child;
             }
-            totalSize += file.size;
             node[key] = file.size;
             node.file = file;
         }
-        return totalSize;
     }
 
     var repoUri = "https://api.github.com/repos/" + owner + "/" + repo;
@@ -142,46 +140,55 @@ function renderPage() {
             originalFiles = originalFiles.filter(interesting);
 
             var root = {};
-            updateTree(root, originalFiles, "size");
+            updateTree(root, originalFiles, "startSize");
 
-            getCachedJson(repoUri + "/compare/" + startCommit + "..." + endCommit, extractFileListFromDiff, function(error, changedFiles) {
-                changedFiles = changedFiles.filter(interesting);
+            getCachedJson(repoUri + "/commits/" + endCommit, function(data) { return data; }, function(error, data) {
+                var endTree = data.commit.tree.sha;
+                getCachedJson(repoUri + "/git/trees/" + endTree + "?recursive=1", extractFileListFromTree, function(error, endFiles) {
+                    endFiles = endFiles.filter(interesting);
 
-                var changedFileCount = changedFiles.length;
-                updateTree(root, changedFiles, "changes");
+                    updateTree(root, endFiles, "endSize");
 
-                function filesInTree(node) {
-                    if ( node.children ) {
-                        return node.children.reduce(function(a, b) { return a.concat(filesInTree(b));}, []);
-                    }
-                    return [node];
-                }
+                    getCachedJson(repoUri + "/compare/" + startCommit + "..." + endCommit, extractFileListFromDiff, function(error, changedFiles) {
+                        changedFiles = changedFiles.filter(interesting);
 
-                var allFiles = filesInTree( root );
-                var maxChangeRatio = allFiles.map( changeRatio ).reduce( function(a, b) { return Math.max(a, b); }, 0 );
+                        var changedFileCount = changedFiles.length;
+                        updateTree(root, changedFiles, "changes");
 
-                d3.select( ".count.total.files" ).text( allFiles.length );
-                d3.select( ".count.changed.files" ).text( changedFileCount );
-                d3.select( ".percentage.changed.files" ).text(((changedFileCount / allFiles.length) * 100).toFixed());
+                        function filesInTree(node) {
+                            if ( node.children ) {
+                                return node.children.reduce(function(a, b) { return a.concat(filesInTree(b));}, []);
+                            }
+                            return [node];
+                        }
 
-                var node = div.datum(root).selectAll(".node")
-                    .data(treemap.nodes);
+                        var allFiles = filesInTree( root );
+                        var maxChangeRatio = allFiles.map( changeRatio ).reduce( function(a, b) { return Math.max(a, b); }, 0 );
 
-                resize();
+                        d3.select( ".count.total.files" ).text( allFiles.length );
+                        d3.select( ".count.changed.files" ).text( changedFileCount );
+                        d3.select( ".percentage.changed.files" ).text(((changedFileCount / allFiles.length) * 100).toFixed());
 
-                node.enter().append("div")
-                    .attr("class", "node");
+                        var node = div.datum(root).selectAll(".node")
+                            .data(treemap.nodes);
 
-                node.exit().remove();
+                        resize();
 
-                node.call(position)
-                    .style("background", function(d) { return d.children ? null : fillColor(d, maxChangeRatio); })
-                    .style("border", function(d) { return d.children ? null : "1px solid " + borderColor(d); })
-                    .text(function(d) { return d.children ? null : d.name; })
-                    .on("mouseover", function(d) {
-                        var text = d.file ? d.file.filename.replace(/\//g, " / ") : null;
-                        d3.select("#filename").text( text);
+                        node.enter().append("div")
+                            .attr("class", "node");
+
+                        node.exit().remove();
+
+                        node.call(position)
+                            .style("background", function(d) { return d.children ? null : fillColor(d, maxChangeRatio); })
+                            .style("border", function(d) { return d.children ? null : "1px solid " + borderColor(d); })
+                            .text(function(d) { return d.children ? null : d.name; })
+                            .on("mouseover", function(d) {
+                                var text = d.file ? d.file.filename.replace(/\//g, " / ") : null;
+                                d3.select("#filename").text( text);
+                            });
                     });
+                });
             });
         });
     });
